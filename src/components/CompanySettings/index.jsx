@@ -6,7 +6,8 @@ import { doc, updateDoc,getDoc,  } from "firebase/firestore";
 export default function CompanySettings() {
     const [tokenLimit, setTokenLimit] = useState(0)
     const [showTokenLimit, setShowTokenLimit] = useState(true)
-    const [tokenCounter, setTokenCounter] = useState(localStorage.getItem('currentToken'))
+    const [tokenCounter, setTokenCounter] = useState(+(localStorage.getItem('currentToken')))
+    const [estimatedTime, setEstimatedTime] = useState(localStorage.getItem('estimatedTime'))
 
     const tokenLimitFunc = (event) => {
         setTokenLimit(event.target.value)
@@ -19,17 +20,37 @@ export default function CompanySettings() {
 
 
     const buttonFunc= async ()=>{
-        setTokenCounter(0)
+        setTokenCounter(1)
         updateToken()
         await updateDoc(doc(db, "companies", localStorage.getItem('compId')), {
             token: tokenLimit,
             createdAt : Date.now()
           });
+          localStorage.setItem('tokenLimit', tokenLimit)
     }
     const updateToken= async ()=>{
         await updateDoc(doc(db, "companies", localStorage.getItem('compId')), {
             currentToken: tokenCounter
           });
+    }
+
+    const updateTokenBtn=async()=>{
+      const docRef = doc(db, "companies", localStorage.getItem('compId'))
+      const docSnap = await getDoc(docRef);
+      let myValue;
+      
+      if (docSnap.exists()) {
+        myValue = (docSnap.data()).currentToken
+        console.log('abcd')
+
+      } else {
+        console.log("No such document!");
+      }
+      setTokenCounter(myValue+1)
+      localStorage.setItem('currentToken', myValue+1)
+      await updateDoc(doc(db, "companies", localStorage.getItem('compId')), {
+        currentToken: tokenCounter
+      });
     }
 
     const currentTokenValue= async()=>{
@@ -68,12 +89,14 @@ export default function CompanySettings() {
             if (tokenCounter<myValue){                
             setTokenCounter(tokenCounter+1)
             }
-        }, 1000);
+        }, (localStorage.getItem('estimatedTime') * 1000));
         return () => clearInterval(interval);
       }, [tokenCounter]);
 
       const resetCounter= async()=>{
-        setTokenCounter(0)
+        setTokenCounter(1)
+        localStorage.setItem('currentToken', tokenCounter)
+        updateToken()
       }
 
       const giveAlert=async()=>{
@@ -96,6 +119,17 @@ export default function CompanySettings() {
         } else {
           console.log("No such document!");
         }
+      }
+
+      const sendEstimatedTime=async()=>{        
+        localStorage.setItem('estimatedTime', estimatedTime)
+        await updateDoc(doc(db, "companies", localStorage.getItem('compId')), {
+          estimatedTime: estimatedTime
+        });
+      }
+
+      const estimatedTimeFunc=(e)=>{
+        setEstimatedTime(e.target.value)
       }
 
 
@@ -121,6 +155,7 @@ export default function CompanySettings() {
 
 <h1>Current TOKEN</h1>
 <p>current Toekn is: {tokenCounter}</p>
+<p>{typeof(tokenCounter)}</p>
 
 
 <button>GET DOC</button>
@@ -129,6 +164,15 @@ export default function CompanySettings() {
 
 
 <button onClick={giveAlert}>Alert</button>
+
+<div>
+  <input type="number" onChange={estimatedTimeFunc} />
+  <button onClick={sendEstimatedTime}>SEND TIME</button>
+</div>
+
+<div>
+{ (+(localStorage.getItem('currentToken')) < +(localStorage.getItem('tokenLimit'))) &&  <button onClick={updateTokenBtn}>update yoken btn</button>}
+</div>
         </div>
     );
 
